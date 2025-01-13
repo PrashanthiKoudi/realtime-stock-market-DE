@@ -1,0 +1,33 @@
+from kafka import KafkaConsumer
+from json import dumps, loads
+from s3fs import S3FileSystem
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+
+# Create a Kafka consumer
+consumer = KafkaConsumer(
+    'demo_testing2',
+    bootstrap_servers=['18.224.67.179:9092'],
+    value_deserializer=lambda x: loads(x.decode('utf-8'))
+)
+
+# Initialize S3 FileSystem
+s3 = S3FileSystem()
+
+# Consume messages from Kafka and write to S3
+for count, message in enumerate(consumer):
+    try:
+        # Log the received message
+        logging.info(f"Received message: {message.value}")
+
+        # Construct the S3 file path
+        s3_file_path = f's3://kafka-stock-market-08/stock_market_{count}.json'
+
+        # Write message to S3
+        with s3.open(s3_file_path, 'wb') as f:
+            f.write(dumps(message.value).encode('utf-8'))  # Write the Kafka message to S3
+        logging.info(f"File written to S3: {s3_file_path}")
+    except Exception as e:
+        logging.error(f"Error writing to S3: {e}")
